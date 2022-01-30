@@ -121,7 +121,7 @@ struct Sphere {
             return;
         }
 
-        auto distance = -half_b - fast_sqrt(discriminant);
+        auto distance = -half_b - std::sqrt(discriminant);
         // Many checks here... Can we rely on sqrt producing NaN for negative
         // values perhaps?
         if (distance >= 0 && (distance < out.distance || !out.is_hit())) {
