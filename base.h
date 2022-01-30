@@ -45,3 +45,5 @@ T radians(const T& deg)
 {
     return deg * (M_PI / 180);
 }
+
+#define NOINLINE __attribute__((noinline))

@@ -86,12 +86,13 @@ struct HitRecord {
 };
 
 class SquaredFloat {
+    float value_;
     float sq_;
 
 public:
-    SquaredFloat(float value): sq_(value*value) {}
+    SquaredFloat(float value): value_(value), sq_(value*value) {}
     float squared() const { return sq_; }
-    //float value() const { return std::sqrt(sq_); }
+    float value() const { return value_; }
 };
 
 struct Sphere {
@@ -113,22 +114,21 @@ struct Sphere {
     };
     void intersect(HitRecord &out, const RayType &r, int id) const {
         const Vec3 oc = r.origin - center;
-        auto a = 1.0f; // r.direction.sqlen();
         auto half_b = dot(oc, r.direction);
         auto c = oc.sqlen() - radius * radius;
-        auto discriminant = half_b * half_b - a * c;
-        auto distance = (-half_b - std::sqrt(discriminant)) / a;
+        auto discriminant = half_b * half_b - c;
+        if (discriminant < 0) {
+            return;
+        }
 
+        auto distance = -half_b - fast_sqrt(discriminant);
         // Many checks here... Can we rely on sqrt producing NaN for negative
         // values perhaps?
-        if (discriminant >= 0 && distance >= 0) {
-            if (distance < out.distance || !out.is_hit()) {
-                out.distance = distance;
-                out.p = r.at(distance);
-                out.set_normal(r, (out.p - center) / radius);
-                out.id = id;
-            }
-            // Set other data about the hit. Color for instance?
+        if (distance >= 0 && (distance < out.distance || !out.is_hit())) {
+            out.distance = distance;
+            out.p = r.at(distance);
+            out.set_normal(r, (out.p - center) / radius);
+            out.id = id;
         }
     }
 };
@@ -140,31 +140,61 @@ struct ScatterResult {
     Vec3 attenuation;
 };
 
+inline double pow5(const double x)
+{
+    const auto x2 = x * x;
+    const auto x4 = x2 * x2;
+    return x4 * x;
+}
+
 struct Metal {
     Vec3 albedo;
     float fuzziness = 1.0f;
 
-    ScatterResult scatter(const HitRecord& hit, Random& rng) const
+    ScatterResult scatter(const HitRecord& hit, const Ray& ray, Random& rng) const
     {
-        // TODO Implement
-        auto direction = hit.normal + random_unit_vector(rng);
-        return { direction, albedo };
+        Vec3 reflected = reflect(ray.direction.norm(), hit.normal);
+        return { reflected + fuzziness * random_in_unit_sphere(rng), albedo };
     }
 };
 struct Dielectric {
     float refraction;
 
-    ScatterResult scatter(const HitRecord& hit, Random& rng) const
+    ScatterResult scatter(const HitRecord& hit, const Ray& ray, Random& rng) const
     {
-        // TODO Implement refraction, might need ray?
-        auto direction = hit.normal + random_unit_vector(rng);
-        return { direction, Vec3{ 1, 1, 1 } };
+        const Vec3 albedo{ 1, 1, 1 };
+        float ratio = hit.front_face ? 1 / refraction : refraction;
+
+        const auto v = ray.direction.norm();
+        const auto& n = hit.normal;
+
+        const auto cos_theta = std::min(dot(-v, n), 1.0f);
+        const auto sin_theta = std::sqrt(1 - cos_theta * cos_theta);
+
+        const auto thresh = std::uniform_real_distribution<float>(0, 1)(rng);
+
+        if (reflectance(cos_theta, ratio) > thresh || ratio * sin_theta > 1)
+            return { reflect(v, n), albedo };
+
+        Vec3 r_out_perp = ratio * (v + cos_theta * n);
+        Vec3 r_out_para = -std::sqrt(std::abs(1.0f - r_out_perp.sqlen())) * n;
+        auto refracted = r_out_perp + r_out_para;
+
+        return { refracted, albedo };
+    }
+
+    // Schlick's approximation
+    static float reflectance(float cos, double ratio)
+    {
+        auto r0 = (1 - ratio) / (1 + ratio);
+        r0 *= r0;
+        return r0 + (1 - r0) * pow5(1 - cos);
     }
 };
 struct Lambertian {
     Vec3 albedo;
 
-    ScatterResult scatter(const HitRecord& hit, Random& rng) const
+    ScatterResult scatter(const HitRecord& hit, const Ray& ray, Random& rng) const
     {
         auto direction = hit.normal + random_unit_vector(rng);
         if (direction.near_zero()) {
@@ -229,7 +259,7 @@ struct Scene {
     }
 
     template <typename T>
-    void IntersectShape(HitRecord& out, const Ray& generic_ray) const {
+    NOINLINE void IntersectShape(HitRecord& out, const Ray& generic_ray) const {
         auto ray = typename T::RayType{ generic_ray };
         visit_one_type<T>(shapes, [&out, ray](int id, const auto &shape) {
             shape.intersect(out, ray, id);
@@ -237,42 +267,30 @@ struct Scene {
     }
 
     void Intersect(HitRecord& out, const Ray& ray) const {
-#if 1
         IntersectShape<Sphere>(out, ray);
-#else
-        for (const Shape& vshape : shapes) {
-            std::visit(vshape, [&](const auto& shape) {
-                shape.intersect(out, ray);
-            });
-        }
-#endif
+        // Plus for any other shapes we implement
     }
 
-    inline Vec3 mtl_color(const HitRecord& hit, Random& rng, int ttl) const
+    NOINLINE Vec3 mtl_color(const HitRecord& hit, const Ray& ray, Random& rng, int ttl) const
     {
         if (ttl > 0) {
-#if 1
             const auto& mat = materials[hit.id];
             auto [direction, attenuation] =
                 std::visit([&](const auto &material){
-                    return material.scatter(hit, rng);
+                    return material.scatter(hit, ray, rng);
                 }, mat);
             return attenuation * trace(Ray{ hit.p, direction }, rng, ttl - 1);
-#else
-            Vec3 direction = hit.normal + random_in_unit_sphere(rng);
-            return 0.5f * trace(Ray{ hit.p, direction }, rng, ttl - 1);
-#endif
         }
         return Vec3{};
     }
 
     // TODO Instead of recursing and ttl, have a way to output new rays with
     // a weight, and maybe we allow up to 4 new rays at some minimum weight.
-    Vec3 trace(const Ray& ray, Random& rng, int ttl) const {
+    NOINLINE Vec3 trace(const Ray& ray, Random& rng, int ttl) const {
         HitRecord hit{};
         Intersect(hit, ray);
         if (hit.is_hit()) {
-            return mtl_color(hit, rng, ttl);
+            return mtl_color(hit, ray, rng, ttl);
         }
         else {
             return sky_color(ray);

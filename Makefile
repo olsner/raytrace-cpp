@@ -1,5 +1,6 @@
 CXXFLAGS = -std=c++17 -O3 -g -march=native
 CXXFLAGS += -MD -MP
+LIBS += -ltbb
 
 RAYTRACE_OBJS = raytrace.o scene.o
 

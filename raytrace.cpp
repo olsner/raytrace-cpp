@@ -3,12 +3,10 @@
 #include "bench.h"
 #include "scene.h"
 
+#include <algorithm>
 #include <cmath>
 #include <chrono>
-
-namespace {
-
-}
+#include <execution>
 
 int main() {
     const bool print_verts = false;
@@ -20,25 +18,35 @@ int main() {
     framebuf<RGB24> buf(WIDTH, HEIGHT);
 
     const uint32_t master_seed = 0xdeadbeef;
-    const int max_rays = 50;
+    const int max_rays = 100;
+    const int samples_per_pixel = 32;
+    const float sample_weight = 1.0f / samples_per_pixel;
+    std::uniform_real_distribution<float> offset_dist_u(0, 1.0f / (WIDTH - 1));
+    std::uniform_real_distribution<float> offset_dist_v(0, 1.0f / (HEIGHT - 1));
+
+    // Dumb
+    std::vector<int> rows(HEIGHT);
+    std::iota(rows.begin(), rows.end(), 0);
 
     double t = bench([&]() {
-        for (int y = 0; y < HEIGHT; y++) {
+        std::for_each(std::execution::par_unseq, rows.begin(), rows.end(),
+        [&](int y){
             const float v = (HEIGHT - 1 - y) * (1.0f / (HEIGHT - 1));
             // Seed each line to prepare for parallelism
             Random rng(master_seed ^ y);
             for (int x = 0; x < WIDTH; x++) {
+                Vec3 sum{};
                 const float u = x * (1.0f / (WIDTH - 1));
-
-                auto ray = scene.camera.shoot_ray(u, v);
-//                std::cout << "Tracing " << ray << std::endl;
-                buf.at(x, y) = scene.trace(ray, rng, max_rays);
-                // scene tracer will consume random numbers. Consider re-
-                // seeding for every x to make it more reproducible.
-                // (This random number generator seems to give very noticable
-                // patterns when using x to seed though.)
+                for (int i = 0; i < samples_per_pixel; i++) {
+                    const float off_u = offset_dist_u(rng);
+                    const float off_v = offset_dist_v(rng);
+                    const auto ray = scene.camera.shoot_ray(u + off_u, v + off_v);
+                    //std::cout << "Tracing " << ray << std::endl;
+                    sum = sum + scene.trace(ray, rng, max_rays);
+                }
+                buf.at(x, y) = sum * sample_weight;
             }
-        }
+        });
     });
     std::cout << "Render speed: " << (t * 1e-9) << " s/frame\n";
 
