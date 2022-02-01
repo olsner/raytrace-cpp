@@ -19,16 +19,6 @@ struct BoundingBox {
     }
 };
 
-inline std::ostream& operator<<(std::ostream& os, Vector3 vec)
-{
-    return os << "[" << vec.x << "," << vec.y << "," << vec.z << "]";
-}
-
-inline std::ostream& operator<<(std::ostream& os, Vector2 vec)
-{
-    return os << "[" << vec.x << "," << vec.y << "]";
-}
-
 inline std::ostream& operator<<(std::ostream& os, const BoundingBox& bbox)
 {
     return os << bbox.min << " .. " << bbox.max << std::endl;

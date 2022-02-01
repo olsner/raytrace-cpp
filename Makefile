@@ -3,16 +3,20 @@ CXXFLAGS += -MD -MP
 LIBS += -ltbb
 
 RAYTRACE_OBJS = raytrace.o scene.o
+INTERSECT_OBJS = intersect.o
 
-OBJS = $(RAYTRACE_OBJS)
+OBJS = $(RAYTRACE_OBJS) $(INTERSECT_OBJS)
 DEPS = $(OBJS:.o=.d)
 
-all: raytrace
+all: raytrace intersect
 
 clean:
 	rm -f raytrace $(OBJS) $(DEPS)
 
 raytrace: $(RAYTRACE_OBJS)
+	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
+
+intersect: $(INTERSECT_OBJS)
 	$(CXX) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 %.o: %.cpp

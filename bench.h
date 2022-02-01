@@ -1,4 +1,6 @@
 #pragma once
+
+#include <iostream>
 #include <chrono>
 
 static double ns()

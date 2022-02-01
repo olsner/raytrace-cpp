@@ -1,5 +1,8 @@
 #pragma once
 
+#include "ray.h"
+#include "vec.h"
+
 struct Sphere {
     Vec3 center;
     float radius;

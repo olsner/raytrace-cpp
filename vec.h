@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <iostream>
 #include <random>
 
 // Structure: Vector2
@@ -196,3 +197,14 @@ inline Vec3 reflect(const Vec3& v, const Vec3& n)
 {
     return v - 2 * dot(v, n) * n;
 }
+
+inline std::ostream& operator<<(std::ostream& os, Vector3 vec)
+{
+    return os << "[" << vec.x << "," << vec.y << "," << vec.z << "]";
+}
+
+inline std::ostream& operator<<(std::ostream& os, Vector2 vec)
+{
+    return os << "[" << vec.x << "," << vec.y << "]";
+}
+
