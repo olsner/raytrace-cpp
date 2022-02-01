@@ -19,7 +19,6 @@ int main() {
     // Sets denormals-are-zero and flush-to-zero, which appears to make no
     // difference whatsoever.
     _mm_setcsr(_mm_getcsr() | 0x8040);
-    printf("MXCSR := %04x\n", _mm_getcsr());
 #endif
 
     framebuf<RGB24> buf(WIDTH, HEIGHT);
