@@ -30,20 +30,23 @@ struct Sphere {
         const Vec3 oc = r.origin - center;
         auto half_b = dot(oc, r.direction);
         auto c = oc.sqlen() - radius * radius;
-        auto discriminant = half_b * half_b - c;
-        if (discriminant < 0) {
+        if (half_b * half_b < c) {
             return;
         }
 
+        auto discriminant = half_b * half_b - c;
         auto distance = -half_b - std::sqrt(discriminant);
         // Many checks here... Can we rely on sqrt producing NaN for negative
         // values perhaps?
         if (distance >= 0 && (distance < out.distance || !out.is_hit())) {
             out.distance = distance;
-            out.p = r.at(distance);
-            out.set_normal(r, (out.p - center) / radius);
             out.id = id;
         }
+    }
+
+    void set_normal(HitRecord &out, const RayType &r) const {
+        out.p = r.at(out.distance);
+        out.set_normal(r, (out.p - center) / radius);
     }
 };
 
@@ -108,6 +111,11 @@ struct Scene {
         visit_one_type<T>(shapes, [&out, ray](int id, const auto &shape) {
             shape.intersect(out, ray, id);
         });
+        if(out.is_hit()){
+            std::visit([&out,ray](const auto &shape) {
+                shape.set_normal(out, ray);
+            }, shapes[out.id]);
+        }
     }
 
     void Intersect(HitRecord& out, const Ray& ray) const {
