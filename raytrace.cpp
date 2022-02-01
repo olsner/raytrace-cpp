@@ -15,6 +15,13 @@ int main() {
     const auto scene = generate_scene(WIDTH, HEIGHT);
     const auto& camera = scene.camera;
 
+#ifdef __SSE__
+    // Sets denormals-are-zero and flush-to-zero, which appears to make no
+    // difference whatsoever.
+    _mm_setcsr(_mm_getcsr() | 0x8040);
+    printf("MXCSR := %04x\n", _mm_getcsr());
+#endif
+
     framebuf<RGB24> buf(WIDTH, HEIGHT);
 
     const uint32_t master_seed = 0xdeadbeef;
