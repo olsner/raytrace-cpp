@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <cmath>
 #include <chrono>
+#define __TBB_show_deprecation_message_task_H // Silence annoying TBB warning
 #include <execution>
 
 int main() {
