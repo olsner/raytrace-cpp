@@ -25,8 +25,8 @@ int main() {
     framebuf<RGB24> buf(WIDTH, HEIGHT);
 
     const uint32_t master_seed = 0xdeadbeef;
-    const int max_rays = 100;
-    const int samples_per_pixel = 32;
+    const int max_rays = 50;
+    const int samples_per_pixel = 100;
     const float sample_weight = 1.0f / samples_per_pixel;
     std::uniform_real_distribution<float> offset_dist_u(0, 1.0f / (WIDTH - 1));
     std::uniform_real_distribution<float> offset_dist_v(0, 1.0f / (HEIGHT - 1));
@@ -56,6 +56,7 @@ int main() {
         });
     });
     std::cout << "Render speed: " << (t * 1e-9) << " s/frame\n";
+    std::cout << "Rays used: " << (WIDTH * HEIGHT * samples_per_pixel) << "\n";
 
     buf.save_ppm("frame.ppm");
 }
