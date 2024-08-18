@@ -8,12 +8,7 @@ struct Sphere {
     Point3 center;
     float radius;
 
-    void intersect(const InvertedRay &r, HitRecord &out, int id) const {
-        NormalizedRay nr{r.origin, r.direction};
-        intersect(nr, out, id);
-    }
-
-    void intersect(const NormalizedRay &r, HitRecord &out, int id) const {
+    void intersect(const Ray &r, HitRecord &out, int id) const {
         const Vec3 oc = r.origin - center;
         auto half_b = dot(oc, r.direction);
         auto c = oc.sqlen() - radius * radius;
@@ -31,7 +26,7 @@ struct Sphere {
         }
     }
 
-    void set_normal(HitRecord &out, const NormalizedRay &r) const {
+    void set_normal(HitRecord &out, const Ray &r) const {
         out.p = r.at(out.distance);
         out.set_normal(r, (out.p - center) / radius);
     }

@@ -99,12 +99,12 @@ public:
         return items;
     }
 
-    bool intersects(const InvertedRay& ray) const {
+    bool intersects(const Ray& ray) const {
         return bounds.intersects(ray);
     }
 
     template <typename... Args>
-    void intersect(const InvertedRay& ray, Args&&... args) const {
+    void intersect(const Ray& ray, Args&&... args) const {
         if (!intersects(ray)) {
             //printf("Skipping %zu objects :)\n", items.size());
             return;
@@ -119,11 +119,6 @@ public:
                 item.intersect(ray, std::forward<Args>(args)...);
             }
         }
-    }
-
-    template <typename Ray, typename... Args>
-    void intersect(const Ray& ray, Args&&... args) const {
-        intersect(InvertedRay(ray), std::forward<Args>(args)...);
     }
 
     void dump(std::ostream& os, std::string indent) const {

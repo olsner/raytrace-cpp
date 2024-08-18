@@ -52,7 +52,6 @@ struct Scene {
             }, shape);
         }
 
-        template <typename Ray>
         void intersect(const Ray& ray, HitRecord& out) const {
             std::visit([&](const auto &shape) {
                 shape.intersect(ray, out, id);
@@ -81,8 +80,7 @@ struct Scene {
     }
 
     template <typename S>
-    NOINLINE void IntersectShape(HitRecord& out, const Ray& generic_ray) const {
-        const NormalizedRay ray(generic_ray);
+    NOINLINE void IntersectShape(HitRecord& out, const Ray& ray) const {
         if (bvh.has_value()) {
             bvh->intersect(ray, out);
         } else {

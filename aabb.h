@@ -4,16 +4,6 @@
 #include "ray.h"
 #include "vec.h"
 
-struct InvertedRay {
-    Vec3 origin;
-    Vec3 direction;
-    Vec3 inv_direction;
-
-    template <typename Ray>
-    InvertedRay(const Ray& ray): origin(ray.origin), direction(ray.direction), inv_direction(1 / ray.direction.norm()) {
-    }
-};
-
 class AABB {
     Vec3 min = Vec3::inf();
     Vec3 max = -Vec3::inf();
@@ -57,16 +47,12 @@ public:
         }
     }
 
-    bool intersects(const NormalizedRay& ray) const {
-        return intersects(InvertedRay(ray));
-    }
-
-    NOINLINE bool intersects(const InvertedRay& ray) const {
+    bool intersects(const Ray& ray) const {
         const Vec3 v1 = min - ray.origin;
         const Vec3 v2 = max - ray.origin;
 
-        const Vec3 t1 = v1 * ray.inv_direction;
-        const Vec3 t2 = v2 * ray.inv_direction;
+        const Vec3 t1 = v1 * ray.inverted_direction;
+        const Vec3 t2 = v2 * ray.inverted_direction;
 
         const Vec3 tmin = ::min(t1, t2), tmax = ::max(t1,t2);
 

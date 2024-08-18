@@ -3,23 +3,11 @@
 struct Ray {
     Point3 origin;
     Vec3 direction;
+    Vec3 inverted_direction;
 
-    Point3 at(float t) const {
-        return origin + t * direction;
-    }
-};
-
-// Ray that guarantees normalized direction vector. (TODO Why isn't that
-// already required in Ray?)
-struct NormalizedRay {
-    Point3 origin;
-    Vec3 direction;
-
-    NormalizedRay() = default;
-    NormalizedRay(const Point3& origin, const Vec3& direction):
-        origin(origin), direction(direction) {}
-    NormalizedRay(const Ray& ray):
-        origin(ray.origin), direction(ray.direction.norm()) {}
+    Ray(const Point3& origin, const Vec3& direction):
+        origin(origin), direction(direction.norm()),
+        inverted_direction(1 / direction.norm()) {}
 
     Point3 at(float t) const {
         return origin + t * direction;
@@ -43,8 +31,7 @@ struct HitRecord {
         return distance >= 0;
     }
 
-    template <typename RayType>
-    void set_normal(const RayType& ray, const Vec3& outwards) {
+    void set_normal(const Ray& ray, const Vec3& outwards) {
         front_face = dot(ray.direction, outwards) < 0;
         normal = front_face ? outwards : -outwards;
     }
