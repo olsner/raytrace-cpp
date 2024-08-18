@@ -6,6 +6,7 @@
 #include "camera.h"
 #include "material.h"
 #include "sphere.h"
+#include "bvh.h"
 
 #include <optional>
 #include <variant>
@@ -13,22 +14,6 @@
 using Shape = std::variant<Sphere>;
 
 using Material = std::variant<Metal, Dielectric, Lambertian>;
-
-struct Object {
-    Shape shape;
-    Material material;
-};
-
-template <typename T, typename Fun, typename Var>
-void visit_one_type(const std::vector<Var> &vec, Fun&& fun)
-{
-    for (size_t i = 0; i < vec.size(); i++) {
-        const auto& var = vec[i];
-        if (std::holds_alternative<T>(var)){
-            fun(i, std::get<T>(var));
-        }
-    }
-}
 
 inline Vec3 sky_color(const Ray& ray) {
     auto dir = ray.direction.norm();
@@ -45,36 +30,70 @@ inline Vec3 norm_color(const HitRecord& hit)
     return 0.5f * (n + 1);
 }
 
+template<typename T>
 struct Scene {
-    // For now: materials are simply duplicated with one array entry per shape.
-    // Check if it would be useful to share materials and e.g. have an index
-    // in the shape?
-    std::vector<Material> materials;
+    struct Object {
+        T shape;
+        // TODO Consider an index instead of the data?
+        Material material;
+        int id;
 
-    // 
-    std::vector<Shape> shapes;
+        Object(int id, const T& shape, const Material& material): shape(shape), material(material), id(id) {}
+
+        AABB get_bounds() const {
+            return std::visit([&](const auto &shape) {
+                return shape.get_bounds();
+            }, shape);
+        }
+
+        Point3 get_center() const {
+            return std::visit([&](const auto &shape) {
+                return shape.get_center();
+            }, shape);
+        }
+
+        template <typename Ray>
+        void intersect(const Ray& ray, HitRecord& out) const {
+            std::visit([&](const auto &shape) {
+                shape.intersect(ray, out, id);
+            }, shape);
+        }
+    };
+
+    std::vector<Object> objects;
+    // TODO BVH doesn't need to copy around materials and stuff...
+    std::optional<BVH<Object>> bvh;
 
     Camera camera;
 
-    void Add(const Shape& shape, const Material& material)
+    void Add(T shape, const Material& material)
     {
-        shapes.push_back(shape);
-        materials.push_back(material);
-        // On second thought, ray/sphere intersection is (I think) simpler than
-        // ray/box intersection.
-//        bounds.push_back(bounds(shape));
+        objects.emplace_back(objects.size(), shape, material);
     }
 
-    template <typename T>
+    void Finish()
+    {
+        bvh = BVH(objects);
+    }
+
+    const Material& GetMaterialOfObject(size_t id) const {
+        return objects[id].material;
+    }
+
+    template <typename S>
     NOINLINE void IntersectShape(HitRecord& out, const Ray& generic_ray) const {
-        auto ray = typename T::RayType{ generic_ray };
-        visit_one_type<T>(shapes, [&out, ray](int id, const auto &shape) {
-            shape.intersect(out, ray, id);
-        });
+        const NormalizedRay ray(generic_ray);
+        if (bvh.has_value()) {
+            bvh->intersect(ray, out);
+        } else {
+            for (const auto& object : objects) {
+                object.intersect(ray, out);
+            }
+        }
         if(out.is_hit()){
-            std::visit([&out,ray](const auto &shape) {
+            std::visit([&](const auto &shape) {
                 shape.set_normal(out, ray);
-            }, shapes[out.id]);
+            }, objects[out.id].shape);
         }
     }
 
@@ -86,7 +105,7 @@ struct Scene {
     NOINLINE Vec3 mtl_color(const HitRecord& hit, const Ray& ray, Random& rng, int ttl) const
     {
         if (ttl > 0) {
-            const auto& mat = materials[hit.id];
+            const auto& mat = GetMaterialOfObject(hit.id);
             auto [direction, attenuation] =
                 std::visit([&](const auto &material){
                     return material.scatter(hit, ray, rng);
@@ -108,6 +127,14 @@ struct Scene {
             return sky_color(ray);
         }
     }
+
+    void Dump(std::ostream& os = std::cout) const {
+        if (bvh.has_value()) {
+            os << *bvh << "\n";
+        } else {
+            os << "No BVH present\n";
+        }
+    }
 };
 
-Scene generate_scene(float width, float height);
+Scene<Shape> generate_scene(float width, float height);

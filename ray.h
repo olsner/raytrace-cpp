@@ -1,10 +1,27 @@
 #pragma once
 
 struct Ray {
-    Vec3 origin;
+    Point3 origin;
     Vec3 direction;
 
-    Vec3 at(float t) const {
+    Point3 at(float t) const {
+        return origin + t * direction;
+    }
+};
+
+// Ray that guarantees normalized direction vector. (TODO Why isn't that
+// already required in Ray?)
+struct NormalizedRay {
+    Point3 origin;
+    Vec3 direction;
+
+    NormalizedRay() = default;
+    NormalizedRay(const Point3& origin, const Vec3& direction):
+        origin(origin), direction(direction) {}
+    NormalizedRay(const Ray& ray):
+        origin(ray.origin), direction(ray.direction.norm()) {}
+
+    Point3 at(float t) const {
         return origin + t * direction;
     }
 };
@@ -16,9 +33,10 @@ inline std::ostream& operator<<(std::ostream& os, const Ray& ray)
 
 struct HitRecord {
     float distance = -1;
-    int id;
-    Vec3 p;
+    Point3 p;
     Vec3 normal;
+    // TODO We are very far from needing a whole 32 bits for this
+    uint32_t id;
     bool front_face;
 
     bool is_hit() const {

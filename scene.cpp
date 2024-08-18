@@ -2,8 +2,8 @@
 
 #include <random>
 
-Scene generate_scene(float width, float height) {
-    Scene scene;
+Scene<Shape> generate_scene(float width, float height) {
+    Scene<Shape> scene;
 
     std::mt19937 rng;
     std::uniform_real_distribution<float> unif{0.0f, 1.0f};
@@ -46,6 +46,6 @@ Scene generate_scene(float width, float height) {
     scene.Add(Sphere{ { 0, 1, 0  }, 1.0f }, Dielectric{ 1.5f });
     scene.Add(Sphere{ { -4, 1, 0 }, 1.0f }, Lambertian{ { 0.4f, 0.2f, 0.1f } });
     scene.Add(Sphere{ { 4, 1, 0  }, 1.0f }, Metal{ { 0.7f, 0.6f, 0.5f }, 0.0f });
-
+    scene.Finish();
     return scene;
 }

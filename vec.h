@@ -86,9 +86,17 @@ struct Vector3
     {
         return Vector3(x + other, y + other, z + other);
     }
+    Vector3 operator-(const float& other) const
+    {
+        return Vector3(x - other, y - other, z - other);
+    }
+    Vector3 operator-() const
+    {
+        return { -x, -y, -z };
+    }
     Vector2 xy() const
     {
-        return Vector2 { x, y };
+        return { x, y };
     }
     inline float sqlen() const;
     float len() const
@@ -110,7 +118,11 @@ struct Vector3
         return std::abs(x) < eps && std::abs(y) < eps && std::abs(z) < eps;
     }
 
-    // Positional Variables
+    static Vector3 inf()
+    {
+        return { INFINITY, INFINITY, INFINITY };
+    }
+
     float x = 0.0f;
     float y = 0.0f;
     float z = 0.0f;
@@ -122,6 +134,13 @@ inline Vector3& operator+=(Vector3& left, const Vector3& right)
     left.z += right.z;
     return left;
 }
+inline Vector3& operator-=(Vector3& left, const Vector3& right)
+{
+    left.x -= right.x;
+    left.y -= right.y;
+    left.z -= right.z;
+    return left;
+}
 inline Vector3 operator+(const Vector3& left, const Vector3& right)
 {
     return Vector3(left.x + right.x, left.y + right.y, left.z + right.z);
@@ -130,10 +149,6 @@ inline Vector3 operator-(const Vector3& left, const Vector3& right)
 {
     return Vector3(left.x - right.x, left.y - right.y, left.z - right.z);
 }
-inline Vector3 operator-(const Vector3& left)
-{
-    return { -left.x, -left.y, -left.z };
-}
 inline Vector3 operator*(const Vector3& left, const Vector3& right)
 {
     return Vector3(left.x * right.x, left.y * right.y, left.z * right.z);
@@ -141,6 +156,10 @@ inline Vector3 operator*(const Vector3& left, const Vector3& right)
 inline Vector3 operator*(const float& scale, const Vector3& vec)
 {
     return vec * scale;
+}
+inline Vector3 operator/(const float& scale, const Vector3& vec)
+{
+    return { scale / vec.x, scale / vec.y, scale / vec.z };
 }
 inline Vector3 min(const Vector3& left, const Vector3& right)
 {
@@ -176,6 +195,7 @@ float Vector3::sqlen() const
 
 using Vec2 = Vector2;
 using Vec3 = Vector3;
+using Point3 = Vector3;
 
 template <typename RNG>
 inline Vec3 random_in_unit_sphere(RNG& rng)

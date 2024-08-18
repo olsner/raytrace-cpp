@@ -1,26 +1,19 @@
 #pragma once
 
+#include "aabb.h"
 #include "ray.h"
 #include "vec.h"
 
 struct Sphere {
-    Vec3 center;
+    Point3 center;
     float radius;
 
-    // Allow us to assume direction is normalized regardless of ray input.
-    // (ray should probably require that the direction is normalized anyway?)
-    struct RayType {
-        RayType(const Ray& ray):
-            origin(ray.origin), direction(ray.direction.norm()) {}
+    void intersect(const InvertedRay &r, HitRecord &out, int id) const {
+        NormalizedRay nr{r.origin, r.direction};
+        intersect(nr, out, id);
+    }
 
-        Vec3 origin;
-        Vec3 direction;
-
-        Vec3 at(float t) const {
-            return origin + t * direction;
-        }
-    };
-    void intersect(HitRecord &out, const RayType &r, int id) const {
+    void intersect(const NormalizedRay &r, HitRecord &out, int id) const {
         const Vec3 oc = r.origin - center;
         auto half_b = dot(oc, r.direction);
         auto c = oc.sqlen() - radius * radius;
@@ -38,8 +31,16 @@ struct Sphere {
         }
     }
 
-    void set_normal(HitRecord &out, const RayType &r) const {
+    void set_normal(HitRecord &out, const NormalizedRay &r) const {
         out.p = r.at(out.distance);
         out.set_normal(r, (out.p - center) / radius);
+    }
+
+    const Point3& get_center() const {
+        return center;
+    }
+
+    AABB get_bounds() const {
+        return AABB::centered(center, radius);
     }
 };
