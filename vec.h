@@ -4,6 +4,8 @@
 #include <iostream>
 #include <random>
 
+#include "base.h"
+
 // Structure: Vector2
 //
 // Description: A 2D Vector that Holds Positional Data
@@ -63,6 +65,10 @@ struct Vector3
         y = y_;
         z = z_;
     }
+    explicit Vector3(__m128 vec_) {
+        vec = vec_;
+    }
+
     // Bool Equals Operator Overload
     bool operator==(const Vector3& other) const
     {
@@ -73,26 +79,25 @@ struct Vector3
     {
         return !(*this == other);
     }
-    // Addition Operator Overload
     Vector3 operator*(const float& other) const
     {
-        return Vector3(this->x * other, this->y * other, this->z * other);
+        return Vector3(vec * other);
     }
     Vector3 operator/(const float& other) const
     {
-        return Vector3(x / other, y / other, z / other);
+        return Vector3(vec / other);
     }
     Vector3 operator+(const float& other) const
     {
-        return Vector3(x + other, y + other, z + other);
+        return Vector3(vec + other);
     }
     Vector3 operator-(const float& other) const
     {
-        return Vector3(x - other, y - other, z - other);
+        return Vector3(vec - other);
     }
     Vector3 operator-() const
     {
-        return { -x, -y, -z };
+        return Vector3(0 - vec);
     }
     Vector2 xy() const
     {
@@ -106,6 +111,10 @@ struct Vector3
     [[nodiscard]] Vector3 norm() const
     {
         return *this / len();
+    }
+    float horizontal_sum() const
+    {
+        return x + y + z;
     }
     template <typename RNG>
     static Vector3 random(RNG& rng, float min, float max)
@@ -123,61 +132,56 @@ struct Vector3
         return { INFINITY, INFINITY, INFINITY };
     }
 
-    float x = 0.0f;
-    float y = 0.0f;
-    float z = 0.0f;
+    union {
+        struct {
+            float x = 0.0f;
+            float y = 0.0f;
+            float z = 0.0f;
+        };
+        __m128 vec;
+    };
 };
 inline Vector3& operator+=(Vector3& left, const Vector3& right)
 {
-    left.x += right.x;
-    left.y += right.y;
-    left.z += right.z;
+    left.vec += right.vec;
     return left;
 }
 inline Vector3& operator-=(Vector3& left, const Vector3& right)
 {
-    left.x -= right.x;
-    left.y -= right.y;
-    left.z -= right.z;
+    left.vec += right.vec;
     return left;
 }
 inline Vector3 operator+(const Vector3& left, const Vector3& right)
 {
-    return Vector3(left.x + right.x, left.y + right.y, left.z + right.z);
+    return Vector3(left.vec + right.vec);
 }
 inline Vector3 operator-(const Vector3& left, const Vector3& right)
 {
-    return Vector3(left.x - right.x, left.y - right.y, left.z - right.z);
+    return Vector3(left.vec - right.vec);
 }
 inline Vector3 operator*(const Vector3& left, const Vector3& right)
 {
-    return Vector3(left.x * right.x, left.y * right.y, left.z * right.z);
+    return Vector3(left.vec * right.vec);
 }
 inline Vector3 operator*(const float& scale, const Vector3& vec)
 {
-    return vec * scale;
+    return Vector3(vec.vec * scale);
 }
 inline Vector3 operator/(const float& scale, const Vector3& vec)
 {
-    return { scale / vec.x, scale / vec.y, scale / vec.z };
+    return Vector3(scale / vec.vec);
 }
 inline Vector3 min(const Vector3& left, const Vector3& right)
 {
-    return Vector3(
-        std::min(left.x, right.x),
-        std::min(left.y, right.y),
-        std::min(left.z, right.z));
+    return Vector3(_mm_min_ps(left.vec, right.vec));
 }
 inline Vector3 max(const Vector3& left, const Vector3& right)
 {
-    return Vector3(
-        std::max(left.x, right.x),
-        std::max(left.y, right.y),
-        std::max(left.z, right.z));
+    return Vector3(_mm_max_ps(left.vec, right.vec));
 }
 inline float dot(const Vector3& a, const Vector3& b)
 {
-    return (a.x * b.x) + (a.y * b.y) + (a.z * b.z);
+    return (a * b).horizontal_sum();
 }
 inline Vector3 cross(const Vector3& a, const Vector3& b)
 {

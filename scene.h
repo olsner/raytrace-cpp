@@ -115,6 +115,8 @@ struct Scene {
 
     // TODO Instead of recursing and ttl, have a way to output new rays with
     // a weight, and maybe we allow up to 4 new rays at some minimum weight.
+    // Or for now, a color attenuation and minimum weight for continued tracing.
+    // Would make sense for Ray to contain the attenuation?
     NOINLINE Vec3 trace(const Ray& ray, Random& rng, int ttl) const {
         HitRecord hit{};
         Intersect(hit, ray);
