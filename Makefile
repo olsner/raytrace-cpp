@@ -1,4 +1,5 @@
-CXXFLAGS = -std=c++17 -O3 -g -march=native
+# fast math reduced runtime from 15s to 12s, so seems useful :)
+CXXFLAGS = -std=c++17 -O3 -g -march=native -ffast-math
 CXXFLAGS += -MD -MP
 LIBS += -ltbb
 
