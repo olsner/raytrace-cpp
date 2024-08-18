@@ -4,10 +4,12 @@ struct Ray {
     Point3 origin;
     Vec3 direction;
     Vec3 inverted_direction;
+    Vec3 color;
 
-    Ray(const Point3& origin, const Vec3& direction):
+    Ray(const Point3& origin, const Vec3& direction, const Vec3& color):
         origin(origin), direction(direction.norm()),
-        inverted_direction(1 / direction.norm()) {}
+        inverted_direction(1 / direction.norm()),
+        color(color) {}
 
     Point3 at(float t) const {
         return origin + t * direction;

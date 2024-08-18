@@ -43,6 +43,7 @@ struct Camera {
     }
 
     Ray shoot_ray(float u, float v) const {
-        return Ray(origin, corner + u * horizontal + v * vertical - origin);
+        const Vec3 color{ 1, 1, 1 };
+        return Ray(origin, corner + u * horizontal + v * vertical - origin, color);
     }
 };

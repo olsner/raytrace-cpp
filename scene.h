@@ -1,5 +1,9 @@
 #pragma once
 
+#include <atomic>
+#include <optional>
+#include <variant>
+
 #include "base.h"
 #include "framebuf.h"
 #include "ray.h"
@@ -7,9 +11,6 @@
 #include "material.h"
 #include "sphere.h"
 #include "bvh.h"
-
-#include <optional>
-#include <variant>
 
 using Shape = std::variant<Sphere>;
 
@@ -21,7 +22,7 @@ inline Vec3 sky_color(const Ray& ray) {
     auto t = 0.5f * dir.y + 0.5f;
     Vec3 blue { 0.5, 0.7, 1 }; // light blue
     Vec3 white { 1, 1, 1 };
-    return lerp(blue, white, t);
+    return lerp(blue, white, t) * ray.color;
 }
 
 inline Vec3 norm_color(const HitRecord& hit)
@@ -104,19 +105,22 @@ struct Scene {
     {
         if (ttl > 0) {
             const auto& mat = GetMaterialOfObject(hit.id);
-            auto [direction, attenuation] =
+            auto [direction, color] =
                 std::visit([&](const auto &material){
                     return material.scatter(hit, ray, rng);
                 }, mat);
-            return attenuation * trace(Ray{ hit.p, direction }, rng, ttl - 1);
+            // Minimum value required to affect output pixel value (I think).
+            constexpr float MIN_LIGHT = 1.0f / 255 / 100;
+            if (std::max(color.x, color.y) > MIN_LIGHT || color.z > MIN_LIGHT) {
+                return trace(Ray(hit.p, direction, color), rng, ttl - 1);
+            } else {
+                return color;
+            }
         }
-        return Vec3{};
+        return ray.color;
     }
 
-    // TODO Instead of recursing and ttl, have a way to output new rays with
-    // a weight, and maybe we allow up to 4 new rays at some minimum weight.
-    // Or for now, a color attenuation and minimum weight for continued tracing.
-    // Would make sense for Ray to contain the attenuation?
+    // TODO Instead of recursing, have a way to output new rays?
     NOINLINE Vec3 trace(const Ray& ray, Random& rng, int ttl) const {
         HitRecord hit{};
         Intersect(hit, ray);
